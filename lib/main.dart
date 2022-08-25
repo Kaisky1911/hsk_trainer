@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:swipe_cards/swipe_cards.dart';
-
+import 'dart:math';
 
 void main() {
   runApp(const MyApp());
 }
 
 class Card {
-  final String text;
+  final String front;
+  final String back1;
+  final String back2;
+  int level = 0;
 
-  Card({required this.text});
+  Card({required this.front, required this.back1, required this.back2});
 }
 
 class MyApp extends StatelessWidget {
@@ -38,29 +41,15 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   List<SwipeItem> cards = <SwipeItem>[];
   late MatchEngine swipeEngine;
-  var data = {
-    "counter": 0,
-    "voc_unseen": {
-      [
-        {
-          "chinese": "你好",
-          "pinyin": "nihao",
-          "english": "hallo1",
-        },
-        {
-          "chinese": "你好",
-          "pinyin": "nihao",
-          "english": "hallo2",
-        },
-        {
-          "chinese": "你好",
-          "pinyin": "nihao",
-          "english": "hallo3",
-        },
-      ],
-    },
-    "voc_seen": {},
-  };
+  var rng = Random();
+  int counter = -1;
+  List<dynamic> cardsUnseen = [
+    Card(front: "你好1", back1: "nihao", back2: "hallo1"),
+    Card(front: "你好2", back1: "nihao", back2: "hallo1"),
+    Card(front: "你好3", back1: "nihao", back2: "hallo1"),
+    Card(front: "你好4", back1: "nihao", back2: "hallo1"),
+  ];
+  Map cardMap = {};
 
   @override
   void initState() {
@@ -72,46 +61,71 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void addCard() {
     setState(() {
+      if (!cardMap.containsKey(counter + 1)) {
+        if (cardsUnseen.length == 0) return;
+        int idx = rng.nextInt(cardsUnseen.length);
+        dynamic voc = cardsUnseen.removeAt(idx);
+        cardMap[counter + 1] = voc;
+      }
+
       cards.add(SwipeItem(
-        content: Card(text: "hi"),
-        likeAction: () {
-          print("ya");
-          addCard();
-        },
-        nopeAction: () {
-          print("nope");
-          addCard();
-        }
-      ));
+          content: cardMap[counter + 1],
+          likeAction: () {
+            print("ya");
+            addCard();
+          },
+          nopeAction: () {
+            print("nope");
+            addCard();
+          }));
+
+      counter++;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      backgroundColor: Colors.black87,
-      body: SwipeCards(
-        matchEngine: swipeEngine,
-        itemBuilder: (BuildContext context, int index) {
-          return Expanded(
-            child: Text(
-              cards[index].content.text,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 30,
-                
-                ),
-                textAlign: TextAlign.center,
-            )
-          );
-        },
-        onStackFinished:() {},
-        upSwipeAllowed: false,
-        fillSpace: true,
-      )
-    );
+        appBar: AppBar(
+          title: Text(widget.title),
+        ),
+        backgroundColor: Colors.black87,
+        body: SwipeCards(
+          matchEngine: swipeEngine,
+          itemBuilder: (BuildContext context, int index) {
+            return Expanded(
+                child: Container(
+                    color: Colors.red,
+                    child: Column(children: [
+                      Text(
+                        cards[index].content.front,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      Text(
+                        cards[index].content.back1,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      Text(
+                        cards[index].content.back2,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ])));
+          },
+          onStackFinished: () {},
+          upSwipeAllowed: false,
+          fillSpace: true,
+        ));
   }
 }
