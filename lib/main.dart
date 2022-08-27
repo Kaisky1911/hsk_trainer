@@ -1,18 +1,21 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:swipe_cards/swipe_cards.dart';
 import 'dart:math';
+import 'package:flutter/services.dart' show rootBundle;
 
 void main() {
   runApp(const MyApp());
 }
 
 class Card {
-  final String front;
-  final String back1;
-  final String back2;
+  final String hanzi;
+  final List<String> pinyin;
+  final List<String> english;
   int level = 0;
 
-  Card({required this.front, required this.back1, required this.back2});
+  Card({required this.hanzi, required this.pinyin, required this.english});
 }
 
 class MyApp extends StatelessWidget {
@@ -42,40 +45,57 @@ class _MyHomePageState extends State<MyHomePage> {
   List<SwipeItem> cards = <SwipeItem>[];
   late MatchEngine swipeEngine;
   var rng = Random();
-  int counter = -1;
-  List<dynamic> cardsUnseen = [
-    Card(front: "你好1", back1: "nihao", back2: "hallo1"),
-    Card(front: "你好2", back1: "nihao", back2: "hallo1"),
-    Card(front: "你好3", back1: "nihao", back2: "hallo1"),
-    Card(front: "你好4", back1: "nihao", back2: "hallo1"),
-  ];
+  int counter = -2;
+  List<dynamic> cardsUnseen = [];
   Map cardMap = {};
+  bool loaded = false;
+  bool shown = false;
 
   @override
   void initState() {
     swipeEngine = MatchEngine(swipeItems: cards);
-    addCard();
-    addCard();
+    rootBundle.loadString('hsk.json').then((dataText) => loadDone(dataText));
     super.initState();
+  }
+
+  void loadDone(dataText) {
+    dynamic data = jsonDecode(dataText);
+    data["vocabulary"].forEach((entry) => loadEntry(entry));
+    addCard();
+    addCard();
+    loaded = true;
+  }
+
+  void loadEntry(entry) {
+    String hanzi = entry["hanzi"];
+    List<String> pinyin = [];
+    List<String> english = [];
+    for (int i = 0; i < entry["translations"].length; i++) {
+      pinyin.add(entry["translations"][i]["pinyin"].join(""));
+      for (int j = 0; j < entry["translations"][i]["english"].length; j++) {
+        english.add(entry["translations"][i]["english"][j]);
+      }
+    }
+    cardsUnseen.add(Card(hanzi: hanzi, pinyin: pinyin, english: english));
   }
 
   void addCard() {
     setState(() {
-      if (!cardMap.containsKey(counter + 1)) {
-        if (cardsUnseen.length == 0) return;
+      if (!cardMap.containsKey(counter + 2)) {
+        if (cardsUnseen.isEmpty) return;
         int idx = rng.nextInt(cardsUnseen.length);
         dynamic voc = cardsUnseen.removeAt(idx);
-        cardMap[counter + 1] = voc;
+        cardMap[counter + 2] = voc;
       }
 
       cards.add(SwipeItem(
-          content: cardMap[counter + 1],
+          content: cardMap[counter + 2],
           likeAction: () {
-            print("ya");
+            shown = false;
             addCard();
           },
           nopeAction: () {
-            print("nope");
+            shown = false;
             addCard();
           }));
 
@@ -85,47 +105,59 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          title: Text(widget.title),
-        ),
-        backgroundColor: Colors.black87,
-        body: SwipeCards(
-          matchEngine: swipeEngine,
-          itemBuilder: (BuildContext context, int index) {
-            return Expanded(
-                child: Container(
-                    color: Colors.red,
+    return loaded
+        ? SwipeCards(
+            matchEngine: swipeEngine,
+            itemBuilder: (BuildContext context, int index) {
+              return Column(children: [
+                Container(
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height,
+                    color: const Color.fromARGB(255, 58, 58, 58),
                     child: Column(children: [
                       Text(
-                        cards[index].content.front,
-                        style: TextStyle(
+                        cards[index].content.hanzi,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 30,
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      Text(
-                        cards[index].content.back1,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      Text(
-                        cards[index].content.back2,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ])));
-          },
-          onStackFinished: () {},
-          upSwipeAllowed: false,
-          fillSpace: true,
-        ));
+                      counter == index && shown
+                          ? Text(
+                              cards[index].content.pinyin.join(", "),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 30,
+                              ),
+                              textAlign: TextAlign.center,
+                            )
+                          : const Text(""),
+                      counter == index && shown
+                          ? Text(
+                              cards[index].content.english.join(", "),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 30,
+                              ),
+                              textAlign: TextAlign.center,
+                            )
+                          : const Text(""),
+                    ])),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      shown = true;
+                    });
+                  },
+                  child: const Text("Show"),
+                ),
+              ]);
+            },
+            onStackFinished: () {},
+            upSwipeAllowed: false,
+            fillSpace: true,
+          )
+        : const Text("loading");
   }
 }
