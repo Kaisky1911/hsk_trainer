@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:swipe_cards/swipe_cards.dart';
 import 'dart:math';
 import 'package:flutter/services.dart' show rootBundle;
 
@@ -42,18 +41,17 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  List<SwipeItem> cards = <SwipeItem>[];
-  late MatchEngine swipeEngine;
   var rng = Random();
   int counter = -2;
   List<dynamic> cardsUnseen = [];
+  Card frontCard = Card(hanzi: "front", pinyin: [], english: []);
+  Card backCard = Card(hanzi: "back", pinyin: [], english: []);
   Map cardMap = {};
   bool loaded = false;
   bool shown = false;
 
   @override
   void initState() {
-    swipeEngine = MatchEngine(swipeItems: cards);
     rootBundle.loadString('hsk.json').then((dataText) => loadDone(dataText));
     super.initState();
   }
@@ -84,80 +82,74 @@ class _MyHomePageState extends State<MyHomePage> {
       if (!cardMap.containsKey(counter + 2)) {
         if (cardsUnseen.isEmpty) return;
         int idx = rng.nextInt(cardsUnseen.length);
-        dynamic voc = cardsUnseen.removeAt(idx);
-        cardMap[counter + 2] = voc;
+        Card card = cardsUnseen.removeAt(idx);
+        cardMap[counter + 2] = card;
       }
-
-      cards.add(SwipeItem(
-          content: cardMap[counter + 2],
-          likeAction: () {
-            shown = false;
-            addCard();
-          },
-          nopeAction: () {
-            shown = false;
-            addCard();
-          }));
-
+      frontCard = backCard;
+      backCard = cardMap[counter + 2];
       counter++;
+      shown = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return loaded
-        ? SwipeCards(
-            matchEngine: swipeEngine,
-            itemBuilder: (BuildContext context, int index) {
-              return Column(children: [
-                Container(
-                    width: MediaQuery.of(context).size.width,
-                    height: MediaQuery.of(context).size.height,
-                    color: const Color.fromARGB(255, 58, 58, 58),
-                    child: Column(children: [
-                      Text(
-                        cards[index].content.hanzi,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      counter == index && shown
-                          ? Text(
-                              cards[index].content.pinyin.join(", "),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 30,
-                              ),
-                              textAlign: TextAlign.center,
-                            )
-                          : const Text(""),
-                      counter == index && shown
-                          ? Text(
-                              cards[index].content.english.join(", "),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 30,
-                              ),
-                              textAlign: TextAlign.center,
-                            )
-                          : const Text(""),
-                    ])),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      shown = true;
-                    });
-                  },
-                  child: const Text("Show"),
+        ? Column(children: [
+            Container(
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height * 0.9,
+                color: const Color.fromARGB(255, 58, 58, 58),
+                child: Column(children: [
+                  Text(
+                    frontCard.hanzi,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  shown
+                      ? Text(
+                          frontCard.pinyin.join(", "),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 30,
+                          ),
+                          textAlign: TextAlign.center,
+                        )
+                      : const Text(""),
+                  shown
+                      ? Text(
+                          frontCard.english.join(", "),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 30,
+                          ),
+                          textAlign: TextAlign.center,
+                        )
+                      : const Text(""),
+                ])),
+            Container(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height * 0.1,
+              color: const Color.fromARGB(255, 58, 58, 58),
+              child: TextButton(
+                onPressed: () {
+                  setState(() {
+                    shown = true;
+                  });
+                },
+                child: const Text(
+                  "Show",
+                  style: TextStyle(
+                    fontSize: 50,
+                    color: Colors.black,
+                  ),
                 ),
-              ]);
-            },
-            onStackFinished: () {},
-            upSwipeAllowed: false,
-            fillSpace: true,
-          )
+              ),
+            ),
+          ])
         : const Text("loading");
   }
 }
