@@ -48,11 +48,17 @@ def pinyin_convert(s):
         new_tokens.append(t)
     return new_tokens
 
-for w in hsk_lines:
+for hsk_line in hsk_lines:
+    bracket = hsk_line.find("（")
+    w = hsk_line
+    if bracket > 0:
+        w = hsk_line[:bracket]
     if w in d:
-        status = "ok"
+        status = 0
+        status_msg = "ok"
         if len(d[w]) > 1:
-            status = "problem 1: more than one meaning"
+            status = 2
+            status_msg = "more than one meaning"
         translations = []
         liangci = None
         for line in d[w]:
@@ -80,25 +86,47 @@ for w in hsk_lines:
                 translation["english"] = translation["english"][:-1]
                 liangci = new_transl[:-1]
             if status == "ok" and len(translation["english"]) > 5:
-                status = "problem 2: more than five translations"
+                status = 3
+                status_msg = "more than five translations"
 
 
             translations.append(translation)
         entry = {
-            "hanzi": w,
+            "hanzi": hsk_line,
             "translations": translations,
             "status": status,
+            "status_msg": status_msg,
         }
         if liangci:
             entry["liangci"] = liangci
         hsk_dict.append(entry)
     else:
         hsk_dict.append({
-            "hanzi": w,
+            "hanzi": hsk_line,
             "translations": [],
-            "status": "problem 0: no translation",
+            "status": 1,
+            "status_msg": "no translation",
         })
 
+
+for entry in hsk_dict:
+    if entry["status"] == 2:
+        translations = []
+        for translation in entry["translations"]:
+            if len(translation["english"]) > 1:
+                translations.append(translation)
+            else:
+                english = translation["english"][0]
+                if english.find("surname") < 0 and english.find("variant of") < 0:
+                    translations.append(translation)
+        entry["translations"] = translations
+        if len(translations) == 1:
+            if len(translations[0]["english"]) > 5:
+                entry["status"] = 3
+                entry["status_msg"] = "more than five translations"
+            else:
+                entry["status"] = 0
+                entry["status_msg"] = "ok"
 
 
 
