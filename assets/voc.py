@@ -69,22 +69,24 @@ for hsk_line in hsk_lines:
             pinyin_end = line.find("]")
             translation["pinyin"] = pinyin_convert(line[pinyin_start:pinyin_end])
             translation["english"] = line.split("/")[1:-1]
-            if translation["english"][-1][:3] == "CL:":
-                cls = translation["english"][-1][3:].split(",")
-                new_transl = ""
-                for cl in cls:
-                    split_pos = cl.find("|")
-                    if split_pos >= 0:
-                        cl = cl[split_pos+1:]
-                    py_start = cl.find("[")
-                    py_tokens = pinyin_convert(cl[py_start:-1])
-                    cl = cl[:py_start]
-                    for t in py_tokens:
-                        cl += t
-                    cl += "]"
-                    new_transl += cl + ","
-                translation["english"] = translation["english"][:-1]
-                liangci = new_transl[:-1]
+            for transl in translation["english"]:
+                if transl[:3] == "CL:":
+                    cls = transl[3:].split(",")
+                    new_transl = ""
+                    for cl in cls:
+                        split_pos = cl.find("|")
+                        if split_pos >= 0:
+                            cl = cl[split_pos+1:]
+                        py_start = cl.find("[")
+                        py_tokens = pinyin_convert(cl[py_start:-1])
+                        cl = cl[:py_start]
+                        for t in py_tokens:
+                            cl += t
+                        cl += "]"
+                        new_transl += cl + ","
+                    liangci = new_transl[:-1]
+                    translation["english"].remove(transl)
+                    break
             if status == "ok" and len(translation["english"]) > 5:
                 status = 3
                 status_msg = "more than five translations"
@@ -130,4 +132,4 @@ for entry in hsk_dict:
 
 
 
-json.dump(hsk_dict, open("hsk.json", "w", encoding="utf8"), indent=4, sort_keys=True, ensure_ascii=False)
+json.dump({"vocabulary": hsk_dict}, open("hsk.json", "w", encoding="utf8"), indent=4, sort_keys=True, ensure_ascii=False)
